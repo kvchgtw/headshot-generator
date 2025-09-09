@@ -245,12 +245,12 @@ export default function Home() {
 
   const getDownloadButtonText = () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const hasWebShare = typeof navigator.share === 'function';
+    const isAndroid = /Android/i.test(navigator.userAgent);
     
-    if (isIOS && hasWebShare) {
-      return 'Share & Save to Photos';
-    } else if (isIOS) {
+    if (isIOS) {
       return 'Save to Photos';
+    } else if (isAndroid) {
+      return 'Save to Gallery';
     } else {
       return 'Download Image';
     }
@@ -262,37 +262,19 @@ export default function Home() {
       const response = await fetch(generatedImage!);
       const blob = await response.blob();
       
-      // Check if Web Share API is available (iOS 12.2+)
-      if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        try {
-          // Create a File object for sharing
-          const file = new File([blob], 'ai-headshot.png', { type: 'image/png' });
-          
-          await navigator.share({
-            files: [file],
-            title: 'AI Generated Headshot',
-            text: 'Check out my AI-generated professional headshot!'
-          });
-          
-          // If sharing is successful, show success message
-          setTimeout(() => {
-            alert('Image shared successfully! You can save it to your Photos from the share menu.');
-          }, 100);
-          
-          return;
-        } catch (shareError) {
-          console.log('Web Share API failed, falling back to download method');
-        }
-      }
-      
-      // Fallback method for all mobile devices
+      // Create a more direct download approach for all mobile devices
       const blobUrl = URL.createObjectURL(blob);
       
-      // Create a temporary link and trigger download
+      // Create a temporary link with proper attributes
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = 'ai-headshot.png';
       link.style.display = 'none';
+      
+      // Add attributes to help with mobile downloads
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      
       document.body.appendChild(link);
       
       // Trigger the download
@@ -304,10 +286,18 @@ export default function Home() {
         URL.revokeObjectURL(blobUrl);
       }, 100);
       
-      // Show instructions for iOS users
+      // Show appropriate success message based on platform
       if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
         setTimeout(() => {
-          alert('Image downloaded! To save to your camera roll:\n1. Long press the downloaded image\n2. Select "Save to Photos" or "Add to Photos"');
+          alert('Image downloaded! To save to your camera roll:\n1. Open the downloaded image\n2. Tap the share button\n3. Select "Save to Photos"');
+        }, 500);
+      } else if (/Android/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          alert('Image saved! Check your Downloads folder or Gallery app.');
+        }, 500);
+      } else {
+        setTimeout(() => {
+          alert('Image downloaded successfully!');
         }, 500);
       }
       
