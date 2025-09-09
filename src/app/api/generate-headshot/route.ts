@@ -17,6 +17,34 @@ interface Customizations {
   portraitSize: string;
 }
 
+// Type definitions for Gemini API
+interface GeminiModel {
+  generateContent: (content: any[]) => Promise<any>;
+}
+
+interface GeminiPart {
+  inlineData?: {
+    data: string;
+    mimeType: string;
+  };
+  text?: string;
+}
+
+interface GeminiResponse {
+  response: {
+    candidates?: Array<{
+      content?: {
+        parts?: GeminiPart[];
+      };
+    }>;
+  };
+}
+
+interface InlineData {
+  data: string;
+  mimeType: string;
+}
+
 // Helper function to generate dynamic prompt
 const generatePrompt = (customizations: Customizations) => {
   // Map background options
@@ -65,7 +93,7 @@ const generatePrompt = (customizations: Customizations) => {
 };
 
 // Helper function to attempt Gemini API call with retry logic
-const attemptGeminiGeneration = async (model: any, prompt: string, base64Data: string, attempt: number = 1): Promise<any> => {
+const attemptGeminiGeneration = async (model: GeminiModel, prompt: string, base64Data: string, attempt: number = 1): Promise<InlineData> => {
   try {
     console.log(`Attempt ${attempt} - Calling Gemini API...`);
     
@@ -87,16 +115,16 @@ const attemptGeminiGeneration = async (model: any, prompt: string, base64Data: s
     }
 
     // Find the image in the response parts
-    const imagePart = parts.find((part: any) => part.inlineData);
+    const imagePart = parts.find((part: GeminiPart) => part.inlineData);
     
     if (!imagePart || !imagePart.inlineData) {
       // Log the actual response for debugging
       console.error('No image data found in response. Response parts:', parts);
       
       // Check if we got text response instead
-      const textParts = parts.filter((part: any) => part.text);
+      const textParts = parts.filter((part: GeminiPart) => part.text);
       if (textParts.length > 0) {
-        const textResponse = textParts.map((part: any) => part.text).join(' ');
+        const textResponse = textParts.map((part: GeminiPart) => part.text).join(' ');
         console.error('Received text response instead of image:', textResponse);
         throw new Error('The AI model returned text instead of an image. This might be due to content policy restrictions or model limitations.');
       }
