@@ -343,21 +343,24 @@ export default function Home() {
 
           <div className="mb-8">
             <div
-              className={`border-3 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 min-h-[300px] flex items-center justify-center ${
-                isDragOver
-                  ? 'border-blue-500 bg-blue-50 scale-105'
-                  : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50'
+              className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 min-h-[300px] flex items-center justify-center ${
+                isLoading
+                  ? 'border-gray-300 bg-gray-50 opacity-50 cursor-not-allowed'
+                  : isDragOver
+                  ? 'border-blue-500 bg-blue-50 scale-105 cursor-pointer'
+                  : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
               }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={openFileExplorer}
+              onDragOver={isLoading ? undefined : handleDragOver}
+              onDragLeave={isLoading ? undefined : handleDragLeave}
+              onDrop={isLoading ? undefined : handleDrop}
+              onClick={isLoading ? undefined : openFileExplorer}
             >
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileInputChange}
+                disabled={isLoading}
                 className="hidden"
               />
               
@@ -387,7 +390,8 @@ export default function Home() {
                 <p className="text-sm text-gray-500 mb-3">Try out with the sample image</p>
                 <button
                   onClick={loadSampleImage}
-                  className="rounded-xl overflow-hidden ring-2 ring-white/60 hover:ring-white transition cursor-pointer"
+                  disabled={isLoading}
+                  className={`rounded-xl overflow-hidden ring-2 ring-white/60 hover:ring-white transition cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   aria-label="Use sample image"
                 >
                   <img src="/sample.jpg" alt="Sample" className="h-16 w-24 object-cover" />
@@ -411,11 +415,12 @@ export default function Home() {
                         <button
                           key={option.id}
                           onClick={() => handleCustomizationChange(option)}
+                          disabled={isLoading}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                             customizations.backgroundType === option.id
                               ? 'bg-purple-600 text-white shadow-lg'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -432,11 +437,12 @@ export default function Home() {
                           <button
                             key={option.id}
                             onClick={() => handleCustomizationChange(option)}
+                            disabled={isLoading}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                               customizations.backgroundColor === option.id
                                 ? 'bg-purple-600 text-white shadow-lg'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             {option.label}
                           </button>
@@ -453,11 +459,12 @@ export default function Home() {
                         <button
                           key={option.id}
                           onClick={() => handleCustomizationChange(option)}
+                          disabled={isLoading}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                             customizations.faceAngle === option.id
                               ? 'bg-purple-600 text-white shadow-lg'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -473,11 +480,12 @@ export default function Home() {
                         <button
                           key={option.id}
                           onClick={() => handleCustomizationChange(option)}
+                          disabled={isLoading}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                             customizations.clothing === option.id
                               ? 'bg-purple-600 text-white shadow-lg'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -493,11 +501,12 @@ export default function Home() {
                         <button
                           key={option.id}
                           onClick={() => handleCustomizationChange(option)}
+                          disabled={isLoading}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                             customizations.portraitSize === option.id
                               ? 'bg-purple-600 text-white shadow-lg'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -556,12 +565,6 @@ export default function Home() {
             </div>
           )}
 
-          {isLoading && (
-            <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50">
-              <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mb-6"></div>
-              <p className="text-white text-xl font-semibold">Generating your professional headshot...</p>
-            </div>
-          )}
 
           {/* Footer */}
           <div className="mt-12 pt-8 border-t border-white/20">
