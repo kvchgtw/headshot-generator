@@ -246,8 +246,11 @@ export default function Home() {
   const getDownloadButtonText = () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
+    const hasWebShare = typeof navigator.share === 'function';
     
-    if (isIOS) {
+    if (isIOS && hasWebShare) {
+      return 'Save to Photos';
+    } else if (isIOS) {
       return 'Save to Photos';
     } else if (isAndroid) {
       return 'Save to Gallery';
@@ -262,7 +265,27 @@ export default function Home() {
       const response = await fetch(generatedImage!);
       const blob = await response.blob();
       
-      // Create a more direct download approach for all mobile devices
+      // For iOS devices, use Web Share API with a more targeted approach
+      if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && navigator.share) {
+        try {
+          // Create a File object for sharing
+          const file = new File([blob], 'ai-headshot.png', { type: 'image/png' });
+          
+          // Use Web Share API with minimal text to focus on saving
+          await navigator.share({
+            files: [file],
+            title: 'Save to Photos'
+          });
+          
+          // Success - no additional message needed as the share sheet handles it
+          return;
+        } catch (shareError) {
+          console.log('Web Share API failed, falling back to download method');
+          // Fall through to fallback method
+        }
+      }
+      
+      // Fallback method for all devices (including iOS without Web Share API)
       const blobUrl = URL.createObjectURL(blob);
       
       // Create a temporary link with proper attributes
@@ -289,7 +312,7 @@ export default function Home() {
       // Show appropriate success message based on platform
       if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
         setTimeout(() => {
-          alert('Image downloaded! To save to your camera roll:\n1. Open the downloaded image\n2. Tap the share button\n3. Select "Save to Photos"');
+          alert('Image downloaded! To save to your camera roll:\n1. Open the downloaded image\n2. Tap the share button (square with arrow)\n3. Select "Save to Photos"');
         }, 500);
       } else if (/Android/i.test(navigator.userAgent)) {
         setTimeout(() => {
