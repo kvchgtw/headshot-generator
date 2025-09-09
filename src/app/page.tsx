@@ -213,15 +213,108 @@ export default function Home() {
     }
   };
 
-  const downloadImage = () => {
+  const downloadImage = async () => {
     if (!generatedImage) return;
 
+    try {
+      // Check if we're on a mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // For mobile devices, use a different approach
+        await downloadImageForMobile();
+      } else {
+        // For desktop, use the traditional download method
+        downloadImageForDesktop();
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      // Fallback to desktop method
+      downloadImageForDesktop();
+    }
+  };
+
+  const downloadImageForDesktop = () => {
     const link = document.createElement('a');
-    link.href = generatedImage;
+    link.href = generatedImage!;
     link.download = 'ai-headshot.png';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getDownloadButtonText = () => {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const hasWebShare = typeof navigator.share === 'function';
+    
+    if (isIOS && hasWebShare) {
+      return 'Share & Save to Photos';
+    } else if (isIOS) {
+      return 'Save to Photos';
+    } else {
+      return 'Download Image';
+    }
+  };
+
+  const downloadImageForMobile = async () => {
+    try {
+      // Convert base64 to blob
+      const response = await fetch(generatedImage!);
+      const blob = await response.blob();
+      
+      // Check if Web Share API is available (iOS 12.2+)
+      if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        try {
+          // Create a File object for sharing
+          const file = new File([blob], 'ai-headshot.png', { type: 'image/png' });
+          
+          await navigator.share({
+            files: [file],
+            title: 'AI Generated Headshot',
+            text: 'Check out my AI-generated professional headshot!'
+          });
+          
+          // If sharing is successful, show success message
+          setTimeout(() => {
+            alert('Image shared successfully! You can save it to your Photos from the share menu.');
+          }, 100);
+          
+          return;
+        } catch (shareError) {
+          console.log('Web Share API failed, falling back to download method');
+        }
+      }
+      
+      // Fallback method for all mobile devices
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'ai-headshot.png';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Trigger the download
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      // Show instructions for iOS users
+      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          alert('Image downloaded! To save to your camera roll:\n1. Long press the downloaded image\n2. Select "Save to Photos" or "Add to Photos"');
+        }, 500);
+      }
+      
+    } catch (error) {
+      console.error('Mobile download failed:', error);
+      throw error;
+    }
   };
 
   return (
@@ -444,7 +537,7 @@ export default function Home() {
                   className="mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-full font-semibold hover:from-green-600 hover:to-emerald-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl"
                   onClick={downloadImage}
                 >
-                  Download Image
+                  {getDownloadButtonText()}
                 </button>
               </div>
             </div>
