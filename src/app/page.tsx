@@ -515,11 +515,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                <button
-                  className="w-full max-w-sm mx-auto mt-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                  onClick={generateHeadshot}
-                  disabled={isLoading}
-                >
+                <div className="flex justify-center mt-8">
+                  <button
+                    className="w-full max-w-sm bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                    onClick={generateHeadshot}
+                    disabled={isLoading}
+                  >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-3">
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -528,7 +529,8 @@ export default function Home() {
                   ) : (
                     'Generate Custom Headshot'
                   )}
-                </button>
+                  </button>
+                </div>
               </>
             )}
           </div>
