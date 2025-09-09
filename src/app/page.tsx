@@ -79,14 +79,51 @@ export default function Home() {
     }));
   };
 
-  const handleFileSelect = useCallback((file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string);
-        setGeneratedImage(null); // Reset generated image when new file is uploaded
+  // Helper function to compress image
+  const compressImage = (file: File, maxWidth: number = 1024, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
       };
-      reader.readAsDataURL(file);
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      try {
+        // Compress image before setting it
+        const compressedImage = await compressImage(file, 1024, 0.8);
+        setUploadedImage(compressedImage);
+        setGeneratedImage(null); // Reset generated image when new file is uploaded
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        // Fallback to original if compression fails
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setUploadedImage(e.target?.result as string);
+          setGeneratedImage(null);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   }, []);
 
@@ -120,18 +157,19 @@ export default function Home() {
     fileInputRef.current?.click();
   };
 
-  // Load sample image from public and convert to base64 data URL
+  // Load sample image from public and convert to base64 data URL with compression
   const loadSampleImage = async () => {
     try {
       const res = await fetch('/sample.jpg');
       const blob = await res.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setUploadedImage(dataUrl);
-        setGeneratedImage(null);
-      };
-      reader.readAsDataURL(blob);
+      
+      // Convert blob to file for compression
+      const file = new File([blob], 'sample.jpg', { type: 'image/jpeg' });
+      
+      // Compress the sample image
+      const compressedImage = await compressImage(file, 1024, 0.8);
+      setUploadedImage(compressedImage);
+      setGeneratedImage(null);
     } catch (e) {
       console.error('Failed to load sample image', e);
     }
