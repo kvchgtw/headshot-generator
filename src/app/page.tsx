@@ -8,6 +8,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [usageCount, setUsageCount] = useState(0);
+  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Customization options state
@@ -194,6 +196,14 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          const retryAfter = errorData.retryAfter || 60;
+          setMessage(`Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`);
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to generate headshot');
       }
 
@@ -201,6 +211,13 @@ export default function Home() {
       
       if (data.success && data.image) {
         setGeneratedImage(data.image);
+        
+        // Show rate limit info if available
+        if (data.rateLimit) {
+          setRemainingRequests(data.rateLimit.remaining);
+          setUsageCount(prev => prev + 1);
+          console.log(`Remaining requests: ${data.rateLimit.remaining}`);
+        }
       } else {
         throw new Error('No image generated');
       }
@@ -337,9 +354,21 @@ export default function Home() {
           <h1 className="text-5xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             AI Headshot Generator
           </h1>
-          <p className="text-xl text-gray-600 text-center mb-8">
+          <p className="text-xl text-gray-600 text-center mb-4">
             Transform your photos into professional headshots using AI
           </p>
+          
+          {/* Usage Counter */}
+          {(usageCount > 0 || remainingRequests !== null) && (
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-4 px-4 py-2 bg-blue-50 rounded-full text-sm text-blue-700">
+                <span>Generated: {usageCount}</span>
+                {remainingRequests !== null && (
+                  <span>Remaining: {remainingRequests}</span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mb-8">
             <div

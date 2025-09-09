@@ -5,6 +5,99 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 2000; // 2 seconds
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5; // 5 requests per minute per IP
+const MAX_REQUESTS_PER_HOUR = 20; // 20 requests per hour per IP
+const MAX_REQUESTS_PER_DAY = 50; // 50 requests per day per IP
+
+// In-memory store for rate limiting (in production, use Redis or database)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+const hourlyStore = new Map<string, { count: number; resetTime: number }>();
+const dailyStore = new Map<string, { count: number; resetTime: number }>();
+
+// Helper function to get client IP
+const getClientIP = (request: NextRequest): string => {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  return forwarded?.split(',')[0] || realIP || 'unknown';
+};
+
+// Rate limiting function
+const checkRateLimit = (ip: string): { allowed: boolean; remaining: number; resetTime: number } => {
+  const now = Date.now();
+  
+  // Clean up expired entries
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (now > value.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+  
+  for (const [key, value] of hourlyStore.entries()) {
+    if (now > value.resetTime) {
+      hourlyStore.delete(key);
+    }
+  }
+  
+  for (const [key, value] of dailyStore.entries()) {
+    if (now > value.resetTime) {
+      dailyStore.delete(key);
+    }
+  }
+  
+  // Check minute limit
+  const minuteData = rateLimitStore.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+  if (now > minuteData.resetTime) {
+    minuteData.count = 0;
+    minuteData.resetTime = now + RATE_LIMIT_WINDOW;
+  }
+  
+  // Check hour limit
+  const hourData = hourlyStore.get(ip) || { count: 0, resetTime: now + (60 * 60 * 1000) };
+  if (now > hourData.resetTime) {
+    hourData.count = 0;
+    hourData.resetTime = now + (60 * 60 * 1000);
+  }
+  
+  // Check day limit
+  const dayData = dailyStore.get(ip) || { count: 0, resetTime: now + (24 * 60 * 60 * 1000) };
+  if (now > dayData.resetTime) {
+    dayData.count = 0;
+    dayData.resetTime = now + (24 * 60 * 60 * 1000);
+  }
+  
+  // Check limits
+  if (minuteData.count >= MAX_REQUESTS_PER_WINDOW) {
+    return { allowed: false, remaining: 0, resetTime: minuteData.resetTime };
+  }
+  
+  if (hourData.count >= MAX_REQUESTS_PER_HOUR) {
+    return { allowed: false, remaining: 0, resetTime: hourData.resetTime };
+  }
+  
+  if (dayData.count >= MAX_REQUESTS_PER_DAY) {
+    return { allowed: false, remaining: 0, resetTime: dayData.resetTime };
+  }
+  
+  // Increment counters
+  minuteData.count++;
+  hourData.count++;
+  dayData.count++;
+  
+  rateLimitStore.set(ip, minuteData);
+  hourlyStore.set(ip, hourData);
+  dailyStore.set(ip, dayData);
+  
+  const remaining = Math.min(
+    MAX_REQUESTS_PER_WINDOW - minuteData.count,
+    MAX_REQUESTS_PER_HOUR - hourData.count,
+    MAX_REQUESTS_PER_DAY - dayData.count
+  );
+  
+  return { allowed: true, remaining, resetTime: minuteData.resetTime };
+};
+
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -151,10 +244,60 @@ const attemptGeminiGeneration = async (model: GeminiModel, prompt: string, base6
 
 export async function POST(request: NextRequest) {
   try {
-    const { image, customizations } = await request.json();
+    // Get client IP for rate limiting
+    const clientIP = getClientIP(request);
+    
+    // Check rate limit
+    const rateLimitResult = checkRateLimit(clientIP);
+    if (!rateLimitResult.allowed) {
+      const resetTimeSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: resetTimeSeconds,
+          limit: 'Too many requests'
+        }, 
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': resetTimeSeconds.toString(),
+            'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimitResult.resetTime.toString()
+          }
+        }
+      );
+    }
 
+    // Parse and validate request body
+    const body = await request.json();
+    const { image, customizations } = body;
+
+    // Input validation
     if (!image) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+    }
+
+    // Validate image format and size
+    if (!image.startsWith('data:image/')) {
+      return NextResponse.json({ error: 'Invalid image format' }, { status: 400 });
+    }
+
+    // Check image size (base64 data should be reasonable)
+    const base64Data = image.split(',')[1];
+    if (!base64Data || base64Data.length > 10 * 1024 * 1024) { // 10MB limit
+      return NextResponse.json({ error: 'Image too large. Please use images under 10MB.' }, { status: 400 });
+    }
+
+    // Validate customizations if provided
+    if (customizations) {
+      const validKeys = ['backgroundType', 'backgroundColor', 'faceAngle', 'clothing', 'portraitSize'];
+      const providedKeys = Object.keys(customizations);
+      const invalidKeys = providedKeys.filter(key => !validKeys.includes(key));
+      
+      if (invalidKeys.length > 0) {
+        return NextResponse.json({ error: 'Invalid customization parameters' }, { status: 400 });
+      }
     }
 
     // Initialize Gemini AI
@@ -169,12 +312,13 @@ export async function POST(request: NextRequest) {
     
     const prompt = generatePrompt(customizations || {});
     console.log('Generated prompt:', prompt);
+    console.log(`Request from IP: ${clientIP}, Remaining requests: ${rateLimitResult.remaining}`);
 
     // Extract base64 data from the image
-    const base64Data = image.split(',')[1];
+    const base64ImageData = base64Data;
     
     // Attempt generation with retry logic
-    const imageData = await attemptGeminiGeneration(model, prompt, base64Data);
+    const imageData = await attemptGeminiGeneration(model, prompt, base64ImageData);
 
     // Return the generated image as base64
     const generatedImageData = `data:${imageData.mimeType};base64,${imageData.data}`;
@@ -182,7 +326,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       image: generatedImageData,
       success: true,
-      prompt: prompt
+      prompt: prompt,
+      rateLimit: {
+        remaining: rateLimitResult.remaining,
+        resetTime: rateLimitResult.resetTime
+      }
     });
 
   } catch (error) {
