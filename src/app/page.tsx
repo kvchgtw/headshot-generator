@@ -72,7 +72,7 @@ export default function Home() {
     { id: 'bust', label: 'Bust Portrait', type: 'portraitSize' }
   ];
 
-  const handleCustomizationChange = (option: any) => {
+  const handleCustomizationChange = (option: { type: string; id: string }) => {
     setCustomizations(prev => ({
       ...prev,
       [option.type]: option.id

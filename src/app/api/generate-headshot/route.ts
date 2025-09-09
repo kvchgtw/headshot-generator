@@ -8,8 +8,17 @@ const RETRY_DELAY = 2000; // 2 seconds
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Type definitions for customization options
+interface Customizations {
+  backgroundType: string;
+  backgroundColor: string;
+  faceAngle: string;
+  clothing: string;
+  portraitSize: string;
+}
+
 // Helper function to generate dynamic prompt
-const generatePrompt = (customizations: any) => {
+const generatePrompt = (customizations: Customizations) => {
   // Map background options
   const backgroundMap: { [key: string]: string } = {
     'gradient': `bold ${customizations.backgroundColor} gradient`,
@@ -78,16 +87,16 @@ const attemptGeminiGeneration = async (model: any, prompt: string, base64Data: s
     }
 
     // Find the image in the response parts
-    const imagePart = parts.find(part => part.inlineData);
+    const imagePart = parts.find((part: any) => part.inlineData);
     
     if (!imagePart || !imagePart.inlineData) {
       // Log the actual response for debugging
       console.error('No image data found in response. Response parts:', parts);
       
       // Check if we got text response instead
-      const textParts = parts.filter(part => part.text);
+      const textParts = parts.filter((part: any) => part.text);
       if (textParts.length > 0) {
-        const textResponse = textParts.map(part => part.text).join(' ');
+        const textResponse = textParts.map((part: any) => part.text).join(' ');
         console.error('Received text response instead of image:', textResponse);
         throw new Error('The AI model returned text instead of an image. This might be due to content policy restrictions or model limitations.');
       }
