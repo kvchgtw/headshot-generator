@@ -19,7 +19,7 @@ interface Customizations {
 
 // Type definitions for Gemini API
 interface GeminiModel {
-  generateContent: (content: any[]) => Promise<any>;
+  generateContent: (content: (string | { inlineData: { data: string; mimeType: string } })[]) => Promise<{ response: { candidates?: Array<{ content?: { parts?: GeminiPart[] } }> } }>;
 }
 
 interface GeminiPart {
@@ -28,16 +28,6 @@ interface GeminiPart {
     mimeType: string;
   };
   text?: string;
-}
-
-interface GeminiResponse {
-  response: {
-    candidates?: Array<{
-      content?: {
-        parts?: GeminiPart[];
-      };
-    }>;
-  };
 }
 
 interface InlineData {
