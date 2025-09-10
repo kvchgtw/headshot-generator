@@ -105,6 +105,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 interface Customizations {
   backgroundType: string;
   backgroundColor: string;
+  backgroundStyle: string;
   faceAngle: string;
   clothing: string;
   portraitSize: string;
@@ -291,7 +292,7 @@ export async function POST(request: NextRequest) {
 
     // Validate customizations if provided
     if (customizations) {
-      const validKeys = ['backgroundType', 'backgroundColor', 'faceAngle', 'clothing', 'portraitSize'];
+      const validKeys = ['backgroundType', 'backgroundColor', 'backgroundStyle', 'faceAngle', 'clothing', 'portraitSize'];
       const providedKeys = Object.keys(customizations);
       const invalidKeys = providedKeys.filter(key => !validKeys.includes(key));
       
