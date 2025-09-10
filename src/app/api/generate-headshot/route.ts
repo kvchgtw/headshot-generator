@@ -1,102 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { checkRateLimit, getClientIP } from '@/lib/upstash-rate-limit';
 
 // Retry configuration
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 2000; // 2 seconds
 
 // Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 1; // 1 request per minute per IP
 const MAX_REQUESTS_PER_HOUR = 20; // 20 requests per hour per IP
 const MAX_REQUESTS_PER_DAY = 50; // 50 requests per day per IP
-
-// In-memory store for rate limiting (in production, use Redis or database)
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-const hourlyStore = new Map<string, { count: number; resetTime: number }>();
-const dailyStore = new Map<string, { count: number; resetTime: number }>();
-
-// Helper function to get client IP
-const getClientIP = (request: NextRequest): string => {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  return forwarded?.split(',')[0] || realIP || 'unknown';
-};
-
-// Rate limiting function
-const checkRateLimit = (ip: string): { allowed: boolean; remaining: number; resetTime: number; limitType?: string } => {
-  const now = Date.now();
-  
-  // Clean up expired entries
-  for (const [key, value] of rateLimitStore.entries()) {
-    if (now > value.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-  
-  for (const [key, value] of hourlyStore.entries()) {
-    if (now > value.resetTime) {
-      hourlyStore.delete(key);
-    }
-  }
-  
-  for (const [key, value] of dailyStore.entries()) {
-    if (now > value.resetTime) {
-      dailyStore.delete(key);
-    }
-  }
-  
-  // Check minute limit
-  const minuteData = rateLimitStore.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
-  if (now > minuteData.resetTime) {
-    minuteData.count = 0;
-    minuteData.resetTime = now + RATE_LIMIT_WINDOW;
-  }
-  
-  // Check hour limit
-  const hourData = hourlyStore.get(ip) || { count: 0, resetTime: now + (60 * 60 * 1000) };
-  if (now > hourData.resetTime) {
-    hourData.count = 0;
-    hourData.resetTime = now + (60 * 60 * 1000);
-  }
-  
-  // Check day limit
-  const dayData = dailyStore.get(ip) || { count: 0, resetTime: now + (24 * 60 * 60 * 1000) };
-  if (now > dayData.resetTime) {
-    dayData.count = 0;
-    dayData.resetTime = now + (24 * 60 * 60 * 1000);
-  }
-  
-  // Check limits BEFORE incrementing counters
-  if (minuteData.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, remaining: 0, resetTime: minuteData.resetTime, limitType: 'minute' };
-  }
-  
-  if (hourData.count >= MAX_REQUESTS_PER_HOUR) {
-    return { allowed: false, remaining: 0, resetTime: hourData.resetTime, limitType: 'hour' };
-  }
-  
-  if (dayData.count >= MAX_REQUESTS_PER_DAY) {
-    return { allowed: false, remaining: 0, resetTime: dayData.resetTime, limitType: 'day' };
-  }
-  
-  // Only increment counters if all limits are not exceeded
-  minuteData.count++;
-  hourData.count++;
-  dayData.count++;
-  
-  rateLimitStore.set(ip, minuteData);
-  hourlyStore.set(ip, hourData);
-  dailyStore.set(ip, dayData);
-  
-  const remaining = Math.min(
-    MAX_REQUESTS_PER_WINDOW - minuteData.count,
-    MAX_REQUESTS_PER_HOUR - hourData.count,
-    MAX_REQUESTS_PER_DAY - dayData.count
-  );
-  
-  return { allowed: true, remaining, resetTime: minuteData.resetTime };
-};
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -249,7 +162,7 @@ export async function POST(request: NextRequest) {
     const clientIP = getClientIP(request);
     
     // Check rate limit
-    const rateLimitResult = checkRateLimit(clientIP);
+    const rateLimitResult = await checkRateLimit(clientIP);
     if (!rateLimitResult.allowed) {
       const resetTimeSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
       const limitMessage = rateLimitResult.limitType === 'minute' ? 
@@ -336,7 +249,8 @@ export async function POST(request: NextRequest) {
       prompt: prompt,
       rateLimit: {
         remaining: rateLimitResult.remaining,
-        resetTime: rateLimitResult.resetTime
+        resetTime: rateLimitResult.resetTime,
+        totalRequests: rateLimitResult.totalRequests
       }
     }, {
       headers: {

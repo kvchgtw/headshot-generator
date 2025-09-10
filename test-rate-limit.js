@@ -41,6 +41,7 @@ async function testRateLimit() {
       } else if (response.status === 200) {
         console.log(`  ✅ Success: ${data.success}`);
         console.log(`  Remaining requests: ${data.rateLimit?.remaining}`);
+        console.log(`  Total requests - Minute: ${data.rateLimit?.totalRequests?.minute}, Hour: ${data.rateLimit?.totalRequests?.hour}, Day: ${data.rateLimit?.totalRequests?.day}`);
       } else {
         console.log(`  ⚠️  Unexpected status ${response.status}: ${data.error}`);
       }

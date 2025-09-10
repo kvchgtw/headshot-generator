@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@types/redis": "^4.0.10",
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "redis": "^5.8.2",
     "sharp": "^0.34.3"
   },
   "devDependencies": {
