@@ -7,7 +7,7 @@ const RETRY_DELAY = 2000; // 2 seconds
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 5; // 5 requests per minute per IP
+const MAX_REQUESTS_PER_WINDOW = 1; // 1 request per minute per IP
 const MAX_REQUESTS_PER_HOUR = 20; // 20 requests per hour per IP
 const MAX_REQUESTS_PER_DAY = 50; // 50 requests per day per IP
 
@@ -24,7 +24,7 @@ const getClientIP = (request: NextRequest): string => {
 };
 
 // Rate limiting function
-const checkRateLimit = (ip: string): { allowed: boolean; remaining: number; resetTime: number } => {
+const checkRateLimit = (ip: string): { allowed: boolean; remaining: number; resetTime: number; limitType?: string } => {
   const now = Date.now();
   
   // Clean up expired entries
@@ -67,20 +67,20 @@ const checkRateLimit = (ip: string): { allowed: boolean; remaining: number; rese
     dayData.resetTime = now + (24 * 60 * 60 * 1000);
   }
   
-  // Check limits
+  // Check limits BEFORE incrementing counters
   if (minuteData.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, remaining: 0, resetTime: minuteData.resetTime };
+    return { allowed: false, remaining: 0, resetTime: minuteData.resetTime, limitType: 'minute' };
   }
   
   if (hourData.count >= MAX_REQUESTS_PER_HOUR) {
-    return { allowed: false, remaining: 0, resetTime: hourData.resetTime };
+    return { allowed: false, remaining: 0, resetTime: hourData.resetTime, limitType: 'hour' };
   }
   
   if (dayData.count >= MAX_REQUESTS_PER_DAY) {
-    return { allowed: false, remaining: 0, resetTime: dayData.resetTime };
+    return { allowed: false, remaining: 0, resetTime: dayData.resetTime, limitType: 'day' };
   }
   
-  // Increment counters
+  // Only increment counters if all limits are not exceeded
   minuteData.count++;
   hourData.count++;
   dayData.count++;
@@ -252,11 +252,17 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = checkRateLimit(clientIP);
     if (!rateLimitResult.allowed) {
       const resetTimeSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+      const limitMessage = rateLimitResult.limitType === 'minute' ? 
+        `Rate limit exceeded: ${MAX_REQUESTS_PER_WINDOW} requests per minute` :
+        rateLimitResult.limitType === 'hour' ?
+        `Rate limit exceeded: ${MAX_REQUESTS_PER_HOUR} requests per hour` :
+        `Rate limit exceeded: ${MAX_REQUESTS_PER_DAY} requests per day`;
+      
       return NextResponse.json(
         { 
-          error: 'Rate limit exceeded. Please try again later.',
+          error: limitMessage,
           retryAfter: resetTimeSeconds,
-          limit: 'Too many requests'
+          limit: rateLimitResult.limitType || 'unknown'
         }, 
         { 
           status: 429,
@@ -331,6 +337,12 @@ export async function POST(request: NextRequest) {
       rateLimit: {
         remaining: rateLimitResult.remaining,
         resetTime: rateLimitResult.resetTime
+      }
+    }, {
+      headers: {
+        'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': rateLimitResult.resetTime.toString()
       }
     });
 

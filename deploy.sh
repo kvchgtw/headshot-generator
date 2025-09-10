@@ -28,3 +28,4 @@ vercel --prod
 echo ""
 echo "✅ Deployment complete!"
 echo "Don't forget to add your GEMINI_API_KEY in the Vercel dashboard environment variables."
+
