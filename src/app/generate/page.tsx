@@ -19,6 +19,22 @@ export default function GeneratePage() {
     setIsVisible(true);
   }, []);
 
+  // Helper function to format seconds into readable time
+  const formatTimeRemaining = (seconds: number): string => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (remainingSeconds > 0) parts.push(`${remainingSeconds}s`);
+
+    return parts.join(' ');
+  };
+
   // Customization options state
   const [customizations, setCustomizations] = useState({
     backgroundType: 'gradient',
@@ -207,7 +223,8 @@ export default function GeneratePage() {
         // Handle rate limiting specifically
         if (response.status === 429) {
           const retryAfter = errorData.retryAfter || 60;
-          setMessage(`Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`);
+          const formattedTime = formatTimeRemaining(retryAfter);
+          setMessage(`Quota used up. It will reset after ${formattedTime} — please try again then.`);
           return;
         }
         
