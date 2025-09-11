@@ -408,12 +408,10 @@ export default function GeneratePage() {
             </div>
             
             {/* Usage Counter */}
-            {(usageCount > 0 || remainingRequests !== null) && (
+            {remainingRequests !== null && (
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-4 px-6 py-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-full text-sm text-orange-700 border border-orange-200">
-                  {remainingRequests !== null && (
-                    <span className="font-semibold">Remaining images: {remainingRequests}</span>
-                  )}
+                  <span className="font-semibold">Remaining images: {remainingRequests}</span>
                 </div>
               </div>
             )}
@@ -615,22 +613,26 @@ export default function GeneratePage() {
                 )}
               </div>
 
+              {/* Message Display - Shows for both errors and success */}
+              {message && (
+                <div className="text-center mb-8">
+                  <div className={`p-6 border rounded-2xl ${
+                    message.startsWith('Error:') 
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <p className={`text-sm ${
+                      message.startsWith('Error:') 
+                        ? 'text-red-800' 
+                        : 'text-yellow-800'
+                    }`}>{message}</p>
+                  </div>
+                </div>
+              )}
+
               {generatedImage && (
                 <div className="text-center">
                   <h2 className="text-4xl font-bold mb-8 text-gray-800">Generated Headshot</h2>
-                  {message && (
-                    <div className={`mb-8 p-6 border rounded-2xl ${
-                      message.startsWith('Error:') 
-                        ? 'bg-red-50 border-red-200' 
-                        : 'bg-yellow-50 border-yellow-200'
-                    }`}>
-                      <p className={`text-sm ${
-                        message.startsWith('Error:') 
-                          ? 'text-red-800' 
-                          : 'text-yellow-800'
-                      }`}>{message}</p>
-                    </div>
-                  )}
                   <div className="relative inline-block">
                     <img 
                       src={generatedImage} 

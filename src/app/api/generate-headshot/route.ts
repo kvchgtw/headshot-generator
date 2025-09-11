@@ -9,7 +9,7 @@ const RETRY_DELAY = 2000; // 2 seconds
 // Rate limiting configuration
 const MAX_REQUESTS_PER_WINDOW = 1; // 1 request per minute per IP
 const MAX_REQUESTS_PER_HOUR = 20; // 20 requests per hour per IP
-const MAX_REQUESTS_PER_DAY = 50; // 50 requests per day per IP
+const MAX_REQUESTS_PER_DAY = 5; // 5 requests per day per IP
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
