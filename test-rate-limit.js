@@ -1,6 +1,8 @@
 // Simple test script to verify rate limiting
 const fs = require('fs');
 
+const MAX_REQUESTS_PER_DAY = 5; // 5 requests per day per IP
+
 // Read sample image and convert to base64
 const sampleImagePath = './public/sample.jpg';
 const imageBuffer = fs.readFileSync(sampleImagePath);
@@ -10,10 +12,10 @@ const API_URL = 'http://localhost:3000/api/generate-headshot';
 
 async function testRateLimit() {
   console.log('Testing rate limiting...');
-  console.log('Expected limits: 1 request per minute, 20 per hour, 50 per day');
-  console.log('Making 3 requests to test minute limit...\n');
+  console.log('Expected limits: 5 requests per day per IP');
+  console.log('Making 7 requests to test daily limit...\n');
 
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 7; i++) {
     try {
       console.log(`Request ${i}:`);
       
@@ -38,10 +40,13 @@ async function testRateLimit() {
         console.log(`  ❌ Rate limited (expected for request ${i}): ${data.error}`);
         console.log(`  Retry after: ${data.retryAfter} seconds`);
         console.log(`  Limit type: ${data.limit}`);
+        if (data.totalRequests) {
+          console.log(`  Usage info: ${data.totalRequests.day}/${MAX_REQUESTS_PER_DAY} images generated today`);
+        }
       } else if (response.status === 200) {
         console.log(`  ✅ Success: ${data.success}`);
         console.log(`  Remaining requests: ${data.rateLimit?.remaining}`);
-        console.log(`  Total requests - Minute: ${data.rateLimit?.totalRequests?.minute}, Hour: ${data.rateLimit?.totalRequests?.hour}, Day: ${data.rateLimit?.totalRequests?.day}`);
+        console.log(`  Total requests - Day: ${data.rateLimit?.totalRequests?.day}`);
       } else {
         console.log(`  ⚠️  Unexpected status ${response.status}: ${data.error}`);
       }

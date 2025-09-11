@@ -2,10 +2,7 @@ import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
 
 // Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 1; // 1 request per minute per IP
-const MAX_REQUESTS_PER_HOUR = 20; // 20 requests per hour per IP
-const MAX_REQUESTS_PER_DAY = 50; // 50 requests per day per IP
+const MAX_REQUESTS_PER_DAY = 5; // 5 requests per day per IP
 
 // Storage type configuration
 type StorageType = 'redis' | 'upstash-rest' | 'memory' | 'disabled';
@@ -25,8 +22,6 @@ let redisClient: RedisClientType | null = null;
 
 // In-memory fallback storage
 const memoryStore = {
-  rateLimit: new Map<string, { count: number; resetTime: number }>(),
-  hourly: new Map<string, { count: number; resetTime: number }>(),
   daily: new Map<string, { count: number; resetTime: number }>(),
   analytics: new Map<string, any>(),
   logs: new Map<string, any[]>()
@@ -299,8 +294,6 @@ interface RateLimitResult {
   resetTime: number;
   limitType?: string;
   totalRequests: {
-    minute: number;
-    hour: number;
     day: number;
   };
 }
@@ -325,22 +318,10 @@ export const getClientIP = (request: Request): string => {
 };
 
 // In-memory rate limiting function
-const checkRateLimitMemory = (ip: string): RateLimitResult => {
+const checkRateLimitMemory = (ip: string, increment: boolean = true): RateLimitResult => {
   const now = Date.now();
   
   // Clean up expired entries
-  for (const [key, value] of memoryStore.rateLimit.entries()) {
-    if (now > value.resetTime) {
-      memoryStore.rateLimit.delete(key);
-    }
-  }
-  
-  for (const [key, value] of memoryStore.hourly.entries()) {
-    if (now > value.resetTime) {
-      memoryStore.hourly.delete(key);
-    }
-  }
-  
   for (const [key, value] of memoryStore.daily.entries()) {
     if (now > value.resetTime) {
       memoryStore.daily.delete(key);
@@ -348,18 +329,6 @@ const checkRateLimitMemory = (ip: string): RateLimitResult => {
   }
   
   // Get or create data for this IP
-  const minuteData = memoryStore.rateLimit.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
-  if (now > minuteData.resetTime) {
-    minuteData.count = 0;
-    minuteData.resetTime = now + RATE_LIMIT_WINDOW;
-  }
-  
-  const hourData = memoryStore.hourly.get(ip) || { count: 0, resetTime: now + (60 * 60 * 1000) };
-  if (now > hourData.resetTime) {
-    hourData.count = 0;
-    hourData.resetTime = now + (60 * 60 * 1000);
-  }
-  
   const dayData = memoryStore.daily.get(ip) || { count: 0, resetTime: now + (24 * 60 * 60 * 1000) };
   if (now > dayData.resetTime) {
     dayData.count = 0;
@@ -367,123 +336,74 @@ const checkRateLimitMemory = (ip: string): RateLimitResult => {
   }
   
   // Check limits BEFORE incrementing counters
-  if (minuteData.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, remaining: 0, resetTime: minuteData.resetTime, limitType: 'minute', totalRequests: { minute: minuteData.count, hour: hourData.count, day: dayData.count } };
-  }
-  
-  if (hourData.count >= MAX_REQUESTS_PER_HOUR) {
-    return { allowed: false, remaining: 0, resetTime: hourData.resetTime, limitType: 'hour', totalRequests: { minute: minuteData.count, hour: hourData.count, day: dayData.count } };
-  }
-  
   if (dayData.count >= MAX_REQUESTS_PER_DAY) {
-    return { allowed: false, remaining: 0, resetTime: dayData.resetTime, limitType: 'day', totalRequests: { minute: minuteData.count, hour: hourData.count, day: dayData.count } };
+    return { allowed: false, remaining: 0, resetTime: dayData.resetTime, limitType: 'day', totalRequests: { day: dayData.count } };
   }
   
-  // Only increment counters if all limits are not exceeded
-  minuteData.count++;
-  hourData.count++;
-  dayData.count++;
+  // Only increment counter if limit is not exceeded and increment is true
+  if (increment) {
+    dayData.count++;
+    memoryStore.daily.set(ip, dayData);
+  }
   
-  memoryStore.rateLimit.set(ip, minuteData);
-  memoryStore.hourly.set(ip, hourData);
-  memoryStore.daily.set(ip, dayData);
+  const remaining = MAX_REQUESTS_PER_DAY - dayData.count;
   
-  const remaining = Math.min(
-    MAX_REQUESTS_PER_WINDOW - minuteData.count,
-    MAX_REQUESTS_PER_HOUR - hourData.count,
-    MAX_REQUESTS_PER_DAY - dayData.count
-  );
-  
-  return { allowed: true, remaining, resetTime: minuteData.resetTime, totalRequests: { minute: minuteData.count, hour: hourData.count, day: dayData.count } };
+  return { allowed: true, remaining, resetTime: dayData.resetTime, totalRequests: { day: dayData.count } };
 };
 
 // Upstash REST rate limiting function
-const checkRateLimitUpstash = async (ip: string): Promise<RateLimitResult> => {
+const checkRateLimitUpstash = async (ip: string, increment: boolean = true): Promise<RateLimitResult> => {
   try {
     const client = initializeUpstash();
     const now = Date.now();
     
-    // Define time windows
-    const minuteWindow = Math.floor(now / RATE_LIMIT_WINDOW);
-    const hourWindow = Math.floor(now / (60 * 60 * 1000));
+    // Define time window for daily limit
     const dayWindow = Math.floor(now / (24 * 60 * 60 * 1000));
     
-    // Create keys for different time windows
-    const minuteKey = `rate_limit:minute:${ip}:${minuteWindow}`;
-    const hourKey = `rate_limit:hour:${ip}:${hourWindow}`;
+    // Create key for daily time window
     const dayKey = `rate_limit:day:${ip}:${dayWindow}`;
     
-    // Get current counts
-    const minuteCount = parseInt(await client.get(minuteKey) || '0');
-    const hourCount = parseInt(await client.get(hourKey) || '0');
+    // Get current count
     const dayCount = parseInt(await client.get(dayKey) || '0');
     
     // Check limits BEFORE incrementing
-    if (minuteCount >= MAX_REQUESTS_PER_WINDOW) {
-      await logIPActivityUpstash(ip, false, 'minute');
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime: (minuteWindow + 1) * RATE_LIMIT_WINDOW,
-        limitType: 'minute',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
-      };
-    }
-    
-    if (hourCount >= MAX_REQUESTS_PER_HOUR) {
-      await logIPActivityUpstash(ip, false, 'hour');
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime: (hourWindow + 1) * (60 * 60 * 1000),
-        limitType: 'hour',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
-      };
-    }
-    
     if (dayCount >= MAX_REQUESTS_PER_DAY) {
-      await logIPActivityUpstash(ip, false, 'day');
+      if (increment) {
+        await logIPActivityUpstash(ip, false, 'day');
+      }
       return {
         allowed: false,
         remaining: 0,
         resetTime: (dayWindow + 1) * (24 * 60 * 60 * 1000),
         limitType: 'day',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
+        totalRequests: { day: dayCount }
       };
     }
     
-    // Increment counters only if all limits are not exceeded
-    await client.incr(minuteKey);
-    await client.expire(minuteKey, 60); // 1 minute TTL
-    await client.incr(hourKey);
-    await client.expire(hourKey, 3600); // 1 hour TTL
-    await client.incr(dayKey);
-    await client.expire(dayKey, 86400); // 1 day TTL
+    // Increment counter only if limit is not exceeded and increment is true
+    if (increment) {
+      await client.incr(dayKey);
+      await client.expire(dayKey, 86400); // 1 day TTL
+      
+      // Log successful request
+      await logIPActivityUpstash(ip, true);
+    }
     
-    // Log successful request
-    await logIPActivityUpstash(ip, true);
-    
-    const remaining = Math.min(
-      MAX_REQUESTS_PER_WINDOW - minuteCount - 1,
-      MAX_REQUESTS_PER_HOUR - hourCount - 1,
-      MAX_REQUESTS_PER_DAY - dayCount - 1
-    );
+    const remaining = MAX_REQUESTS_PER_DAY - dayCount - (increment ? 1 : 0);
     
     return {
       allowed: true,
       remaining,
-      resetTime: (minuteWindow + 1) * RATE_LIMIT_WINDOW,
+      resetTime: (dayWindow + 1) * (24 * 60 * 60 * 1000),
       totalRequests: { 
-        minute: minuteCount + 1, 
-        hour: hourCount + 1, 
-        day: dayCount + 1 
+        day: dayCount + (increment ? 1 : 0)
       }
     };
     
   } catch (error) {
     console.error('Upstash rate limit check failed:', error);
     // Fallback to memory storage
-    return checkRateLimitMemory(ip);
+    return checkRateLimitMemory(ip, increment);
   }
 };
 
@@ -589,105 +509,62 @@ const logIPActivityMemory = (ip: string, allowed: boolean, limitType?: string) =
 };
 
 // Redis-based rate limiting function
-const checkRateLimitRedis = async (ip: string): Promise<RateLimitResult> => {
+const checkRateLimitRedis = async (ip: string, increment: boolean = true): Promise<RateLimitResult> => {
   try {
     const client = await initializeRedis();
     if (!client) {
-      return checkRateLimitMemory(ip);
+      return checkRateLimitMemory(ip, increment);
     }
 
     const now = Date.now();
     
-    // Define time windows
-    const minuteWindow = Math.floor(now / RATE_LIMIT_WINDOW);
-    const hourWindow = Math.floor(now / (60 * 60 * 1000));
+    // Define time window for daily limit
     const dayWindow = Math.floor(now / (24 * 60 * 60 * 1000));
     
-    // Create keys for different time windows
-    const minuteKey = `rate_limit:minute:${ip}:${minuteWindow}`;
-    const hourKey = `rate_limit:hour:${ip}:${hourWindow}`;
+    // Create key for daily time window
     const dayKey = `rate_limit:day:${ip}:${dayWindow}`;
     
-    // Get current counts using pipeline for efficiency
-    const pipeline = client.multi();
-    pipeline.get(minuteKey);
-    pipeline.get(hourKey);
-    pipeline.get(dayKey);
-    
-    const results = await pipeline.exec();
-    const minuteCount = parseInt((results?.[0] as any)?.[1] as string || '0');
-    const hourCount = parseInt((results?.[1] as any)?.[1] as string || '0');
-    const dayCount = parseInt((results?.[2] as any)?.[1] as string || '0');
+    // Get current count
+    const dayCount = parseInt(await client.get(dayKey) || '0');
     
     // Check limits BEFORE incrementing
-    if (minuteCount >= MAX_REQUESTS_PER_WINDOW) {
-      await logIPActivityRedis(ip, false, 'minute');
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime: (minuteWindow + 1) * RATE_LIMIT_WINDOW,
-        limitType: 'minute',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
-      };
-    }
-    
-    if (hourCount >= MAX_REQUESTS_PER_HOUR) {
-      await logIPActivityRedis(ip, false, 'hour');
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime: (hourWindow + 1) * (60 * 60 * 1000),
-        limitType: 'hour',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
-      };
-    }
-    
     if (dayCount >= MAX_REQUESTS_PER_DAY) {
-      await logIPActivityRedis(ip, false, 'day');
+      if (increment) {
+        await logIPActivityRedis(ip, false, 'day');
+      }
       return {
         allowed: false,
         remaining: 0,
         resetTime: (dayWindow + 1) * (24 * 60 * 60 * 1000),
         limitType: 'day',
-        totalRequests: { minute: minuteCount, hour: hourCount, day: dayCount }
+        totalRequests: { day: dayCount }
       };
     }
     
-    // Increment counters only if all limits are not exceeded
-    const incrementPipeline = client.multi();
-    incrementPipeline.incr(minuteKey);
-    incrementPipeline.expire(minuteKey, 60); // 1 minute TTL
-    incrementPipeline.incr(hourKey);
-    incrementPipeline.expire(hourKey, 3600); // 1 hour TTL
-    incrementPipeline.incr(dayKey);
-    incrementPipeline.expire(dayKey, 86400); // 1 day TTL
+    // Increment counter only if limit is not exceeded and increment is true
+    if (increment) {
+      await client.incr(dayKey);
+      await client.expire(dayKey, 86400); // 1 day TTL
+      
+      // Log successful request
+      await logIPActivityRedis(ip, true);
+    }
     
-    await incrementPipeline.exec();
-    
-    // Log successful request
-    await logIPActivityRedis(ip, true);
-    
-    const remaining = Math.min(
-      MAX_REQUESTS_PER_WINDOW - minuteCount - 1,
-      MAX_REQUESTS_PER_HOUR - hourCount - 1,
-      MAX_REQUESTS_PER_DAY - dayCount - 1
-    );
+    const remaining = MAX_REQUESTS_PER_DAY - dayCount - (increment ? 1 : 0);
     
     return {
       allowed: true,
       remaining,
-      resetTime: (minuteWindow + 1) * RATE_LIMIT_WINDOW,
+      resetTime: (dayWindow + 1) * (24 * 60 * 60 * 1000),
       totalRequests: { 
-        minute: minuteCount + 1, 
-        hour: hourCount + 1, 
-        day: dayCount + 1 
+        day: dayCount + (increment ? 1 : 0)
       }
     };
     
   } catch (error) {
     console.error('Redis rate limit check failed:', error);
     // Fallback to memory storage
-    return checkRateLimitMemory(ip);
+    return checkRateLimitMemory(ip, increment);
   }
 };
 
@@ -754,7 +631,7 @@ const logIPActivityRedis = async (ip: string, allowed: boolean, limitType?: stri
 };
 
 // Main rate limiting function with automatic fallback
-export const checkRateLimit = async (ip: string): Promise<RateLimitResult> => {
+export const checkRateLimit = async (ip: string, increment: boolean = true): Promise<RateLimitResult> => {
   const storageType = getStorageType();
   
   if (storageType === 'disabled') {
@@ -762,25 +639,25 @@ export const checkRateLimit = async (ip: string): Promise<RateLimitResult> => {
     return {
       allowed: true,
       remaining: 999,
-      resetTime: Date.now() + RATE_LIMIT_WINDOW,
-      totalRequests: { minute: 0, hour: 0, day: 0 }
+      resetTime: Date.now() + (24 * 60 * 60 * 1000),
+      totalRequests: { day: 0 }
     };
   }
   
   if (storageType === 'memory') {
-    return checkRateLimitMemory(ip);
+    return checkRateLimitMemory(ip, increment);
   }
   
   if (storageType === 'upstash-rest') {
-    return await checkRateLimitUpstash(ip);
+    return await checkRateLimitUpstash(ip, increment);
   }
   
   // Try Redis first, fallback to memory
   try {
-    return await checkRateLimitRedis(ip);
+    return await checkRateLimitRedis(ip, increment);
   } catch (error) {
     console.error('Rate limiting failed, using memory fallback:', error);
-    return checkRateLimitMemory(ip);
+    return checkRateLimitMemory(ip, increment);
   }
 };
 

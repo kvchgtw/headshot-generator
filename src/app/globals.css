@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* React Slick Carousel Styles */
+.carousel-container {
+  max-width: 100%;
+}
+
+.carousel-container .slick-slide {
+  padding: 0 12px;
+}
+
+.carousel-container .slick-track {
+  display: flex;
+  align-items: center;
+}

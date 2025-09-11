@@ -1,633 +1,338 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
+import Slider from 'react-slick';
+import Navigation from '../components/Navigation';
+import Footer from '../components/Footer';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 
-export default function Home() {
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [usageCount, setUsageCount] = useState(0);
-  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function HomePage() {
+  const sliderRef = useRef<Slider>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // Customization options state
-  const [customizations, setCustomizations] = useState({
-    backgroundType: 'gradient',
-    backgroundColor: 'blue',
-    backgroundStyle: 'bold',
-    faceAngle: 'Full-face view',
-    clothing: 'Wearing formal attire',
-    portraitSize: 'This is a bust portrait'
-  });
-
-  // Available options
-  const backgroundOptions = [
-    { id: 'gradient', label: 'Gradient', type: 'backgroundType' },
-    { id: 'park', label: 'Park', type: 'backgroundType' },
-    { id: 'urban', label: 'Urban Street', type: 'backgroundType' },
-    { id: 'beach', label: 'Beach', type: 'backgroundType' },
-    { id: 'mountain', label: 'Mountain', type: 'backgroundType' },
-    { id: 'forest', label: 'Forest', type: 'backgroundType' },
-    { id: 'office', label: 'Office', type: 'backgroundType' },
-    { id: 'studio', label: 'Startup Studio', type: 'backgroundType' },
-    { id: 'corporate', label: 'Financial Corporate', type: 'backgroundType' },
-    { id: 'home', label: 'Home Interior', type: 'backgroundType' },
-    { id: 'library', label: 'Library', type: 'backgroundType' }
-  ];
-
-  const colorOptions = [
-    { id: 'red', label: 'Red', type: 'backgroundColor' },
-    { id: 'blue', label: 'Blue', type: 'backgroundColor' },
-    { id: 'black', label: 'Black', type: 'backgroundColor' },
-    { id: 'brown', label: 'Brown', type: 'backgroundColor' },
-    { id: 'light-grey', label: 'Light Grey', type: 'backgroundColor' },
-    { id: 'dark-grey', label: 'Dark Grey', type: 'backgroundColor' },
-    { id: 'mint-green', label: 'Mint Green', type: 'backgroundColor' },
-    { id: 'violet', label: 'Violet', type: 'backgroundColor' },
-    { id: 'beige', label: 'Beige', type: 'backgroundColor' },
-    { id: 'olive', label: 'Olive', type: 'backgroundColor' },
-    { id: 'navy', label: 'Navy', type: 'backgroundColor' },
-    { id: 'cream', label: 'Cream', type: 'backgroundColor' },
-    { id: 'peach', label: 'Peach', type: 'backgroundColor' },
-    { id: 'white', label: 'White', type: 'backgroundColor' },
-    { id: 'baby-blue', label: 'Baby Blue', type: 'backgroundColor' }
-  ];
-
-  const faceAngleOptions = [
-    { id: 'full-face', label: 'Full-face view', type: 'faceAngle' },
-    { id: 'three-quarter', label: 'Three-quarter view', type: 'faceAngle' }
-  ];
-
-  const clothingOptions = [
-    { id: 'formal', label: 'Formal Attire', type: 'clothing' },
-    { id: 'smart-casual', label: 'Smart Casual', type: 'clothing' },
-    { id: 'street-fashion', label: 'Street Fashion', type: 'clothing' },
-    { id: 'summer-fashion', label: 'Summer Fashion', type: 'clothing' },
-    { id: 'sports', label: 'Sports Outfit', type: 'clothing' }
-  ];
-
-  const portraitSizeOptions = [
-    { id: 'full-body', label: 'Full-body Portrait', type: 'portraitSize' },
-    { id: 'half-body', label: 'Half-body Portrait', type: 'portraitSize' },
-    { id: 'bust', label: 'Bust Portrait', type: 'portraitSize' }
-  ];
-
-  const handleCustomizationChange = (option: { type: string; id: string }) => {
-    setCustomizations(prev => ({
-      ...prev,
-      [option.type]: option.id
-    }));
-  };
-
-  // Helper function to compress image
-  const compressImage = (file: File, maxWidth: number = 1024, quality: number = 0.8): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // Calculate new dimensions
-        let { width, height } = img;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw and compress
-        ctx?.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleFileSelect = useCallback(async (file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      try {
-        // Compress image before setting it
-        const compressedImage = await compressImage(file, 1024, 0.8);
-        setUploadedImage(compressedImage);
-        setGeneratedImage(null); // Reset generated image when new file is uploaded
-      } catch (error) {
-        console.error('Error compressing image:', error);
-        // Fallback to original if compression fails
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setUploadedImage(e.target?.result as string);
-          setGeneratedImage(null);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
+  useEffect(() => {
+    setIsVisible(true);
   }, []);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
-  const openFileExplorer = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Load sample image from public and convert to base64 data URL with compression
-  const loadSampleImage = async () => {
-    try {
-      const res = await fetch('/sample.jpg');
-      const blob = await res.blob();
-      
-      // Convert blob to file for compression
-      const file = new File([blob], 'sample.jpg', { type: 'image/jpeg' });
-      
-      // Compress the sample image
-      const compressedImage = await compressImage(file, 1024, 0.8);
-      setUploadedImage(compressedImage);
-      setGeneratedImage(null);
-    } catch (e) {
-      console.error('Failed to load sample image', e);
-    }
-  };
-
-  const generateHeadshot = async () => {
-    if (!uploadedImage) return;
-
-    setIsLoading(true);
-    setMessage(null); // Clear any previous messages
-    try {
-      const response = await fetch('/api/generate-headshot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          image: uploadedImage,
-          customizations: customizations
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Handle rate limiting specifically
-        if (response.status === 429) {
-          const retryAfter = errorData.retryAfter || 60;
-          setMessage(`Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`);
-          return;
-        }
-        
-        throw new Error(errorData.error || 'Failed to generate headshot');
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.image) {
-        setGeneratedImage(data.image);
-        
-        // Show rate limit info if available
-        if (data.rateLimit) {
-          setRemainingRequests(data.rateLimit.remaining);
-          setUsageCount(prev => prev + 1);
-          console.log(`Remaining requests: ${data.rateLimit.remaining}`);
-        }
+  const handleImageHover = (isHovering: boolean) => {
+    if (sliderRef.current) {
+      if (isHovering) {
+        sliderRef.current.slickPause();
       } else {
-        throw new Error('No image generated');
+        sliderRef.current.slickPlay();
       }
-    } catch (error) {
-      console.error('Error generating headshot:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setMessage(`Error: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const downloadImage = async () => {
-    if (!generatedImage) return;
-
-    try {
-      // Check if we're on a mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // For mobile devices, use a different approach
-        await downloadImageForMobile();
-      } else {
-        // For desktop, use the traditional download method
-        downloadImageForDesktop();
-      }
-    } catch (error) {
-      console.error('Error downloading image:', error);
-      // Fallback to desktop method
-      downloadImageForDesktop();
-    }
-  };
-
-  const downloadImageForDesktop = () => {
-    const link = document.createElement('a');
-    link.href = generatedImage!;
-    link.download = 'ai-headshot.png';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getDownloadButtonText = () => {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const hasWebShare = typeof navigator.share === 'function';
-    
-    if (isIOS && hasWebShare) {
-      return 'Save to Photos';
-    } else if (isIOS) {
-      return 'Save to Photos';
-    } else if (isAndroid) {
-      return 'Save to Gallery';
-    } else {
-      return 'Download Image';
-    }
-  };
-
-  const downloadImageForMobile = async () => {
-    try {
-      // Convert base64 to blob
-      const response = await fetch(generatedImage!);
-      const blob = await response.blob();
-      
-      // For iOS devices, use Web Share API with a more targeted approach
-      if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && navigator.share) {
-        try {
-          // Create a File object for sharing
-          const file = new File([blob], 'ai-headshot.png', { type: 'image/png' });
-          
-          // Use Web Share API with minimal text to focus on saving
-          await navigator.share({
-            files: [file],
-            title: 'Save to Photos'
-          });
-          
-          // Success - no additional message needed as the share sheet handles it
-          return;
-        } catch (shareError) {
-          console.log('Web Share API failed, falling back to download method');
-          // Fall through to fallback method
-        }
-      }
-      
-      // Fallback method for all devices (including iOS without Web Share API)
-      const blobUrl = URL.createObjectURL(blob);
-      
-      // Create a temporary link with proper attributes
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = 'ai-headshot.png';
-      link.style.display = 'none';
-      
-      // Add attributes to help with mobile downloads
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-      
-      document.body.appendChild(link);
-      
-      // Trigger the download
-      link.click();
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      }, 100);
-      
-      // Show appropriate success message based on platform
-      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-          alert('Image downloaded! To save to your camera roll:\n1. Open the downloaded image\n2. Tap the share button (square with arrow)\n3. Select "Save to Photos"');
-        }, 500);
-      } else if (/Android/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-          alert('Image saved! Check your Downloads folder or Gallery app.');
-        }, 500);
-      } else {
-        setTimeout(() => {
-          alert('Image downloaded successfully!');
-        }, 500);
-      }
-      
-    } catch (error) {
-      console.error('Mobile download failed:', error);
-      throw error;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20">
-          <h1 className="text-5xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            AI Headshot Generator
-          </h1>
-          <p className="text-xl text-gray-600 text-center mb-4">
-            Transform your photos into professional headshots using AI
-          </p>
-          
-          {/* Usage Counter */}
-          {(usageCount > 0 || remainingRequests !== null) && (
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-4 px-4 py-2 bg-blue-50 rounded-full text-sm text-blue-700">
-                <span>Generated: {usageCount}</span>
-                {remainingRequests !== null && (
-                  <span>Remaining: {remainingRequests}</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-8">
-            <div
-              className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 min-h-[300px] flex items-center justify-center ${
-                isLoading
-                  ? 'border-gray-300 bg-gray-50 opacity-50 cursor-not-allowed'
-                  : isDragOver
-                  ? 'border-blue-500 bg-blue-50 scale-105 cursor-pointer'
-                  : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
-              }`}
-              onDragOver={isLoading ? undefined : handleDragOver}
-              onDragLeave={isLoading ? undefined : handleDragLeave}
-              onDrop={isLoading ? undefined : handleDrop}
-              onClick={isLoading ? undefined : openFileExplorer}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileInputChange}
-                disabled={isLoading}
-                className="hidden"
-              />
-              
-              {uploadedImage ? (
-                <div className="relative max-w-full max-h-96">
-                  <img 
-                    src={uploadedImage} 
-                    alt="Uploaded" 
-                    className="max-w-full max-h-96 object-contain rounded-xl shadow-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <p className="text-white text-lg font-semibold">Click to change image</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="text-6xl opacity-60">📷</div>
-                  <p className="text-2xl font-semibold text-gray-700">Drag & drop your image here</p>
-                  <p className="text-lg text-gray-500">or click to browse</p>
-                </div>
-              )}
-            </div>
-
-            {/* Sample image thumbnail */}
-            {!uploadedImage && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-500 mb-3">Try out with the sample image</p>
-                <button
-                  onClick={loadSampleImage}
-                  disabled={isLoading}
-                  className={`rounded-xl overflow-hidden ring-2 ring-white/60 hover:ring-white transition cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  aria-label="Use sample image"
-                >
-                  <img src="/sample.jpg" alt="Sample" className="h-16 w-24 object-cover" />
-                </button>
-              </div>
-            )}
-
-            {uploadedImage && (
-              <>
-                {/* Customization Options */}
-                <div className="mt-8 space-y-6">
-                  <h3 className="text-2xl font-bold text-center text-gray-800 mb-6">
-                    Customize Your Headshot
-                  </h3>
-                  
-                  {/* Background Options */}
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-700">Background</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {backgroundOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => handleCustomizationChange(option)}
-                          disabled={isLoading}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            customizations.backgroundType === option.id
-                              ? 'bg-purple-600 text-white shadow-lg'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Color Options (only show if gradient is selected) */}
-                  {customizations.backgroundType === 'gradient' && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-gray-700">Background Color</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {colorOptions.map((option) => (
-                          <button
-                            key={option.id}
-                            onClick={() => handleCustomizationChange(option)}
-                            disabled={isLoading}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                              customizations.backgroundColor === option.id
-                                ? 'bg-purple-600 text-white shadow-lg'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Face Angle */}
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-700">Face Angle</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {faceAngleOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => handleCustomizationChange(option)}
-                          disabled={isLoading}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            customizations.faceAngle === option.id
-                              ? 'bg-purple-600 text-white shadow-lg'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Clothing */}
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-700">Clothing Style</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {clothingOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => handleCustomizationChange(option)}
-                          disabled={isLoading}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            customizations.clothing === option.id
-                              ? 'bg-purple-600 text-white shadow-lg'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Portrait Size */}
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-700">Portrait Size</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {portraitSizeOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => handleCustomizationChange(option)}
-                          disabled={isLoading}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            customizations.portraitSize === option.id
-                              ? 'bg-purple-600 text-white shadow-lg'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-center mt-8">
-                  <button
-                    className="w-full max-w-sm bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                    onClick={generateHeadshot}
-                    disabled={isLoading}
-                  >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Generating...
-                    </div>
-                  ) : (
-                    'Generate Custom Headshot'
-                  )}
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
+      {/* Navigation */}
+      <Navigation />
+      
+      {/* Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/5 via-amber-600/5 to-red-600/5"></div>
+        <div className="relative max-w-7xl mx-auto px-6 py-20 sm:py-32">
+          <div className="text-center">
+            <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+                <span className="bg-gradient-to-r from-gray-900 via-orange-700 to-red-700 bg-clip-text text-transparent">Banana Headshot</span> <span className="text-yellow-500">🍌</span>
+              </h1>
+              <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto font-light">
+                Professional headshots without a photo shoot
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link href="/generate">
+                  <button className="group relative bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:from-orange-700 hover:to-red-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer">
+                    <span className="relative z-10">Generate Now</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-600 rounded-full blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {generatedImage && (
-            <div className="text-center">
-              <h2 className="text-3xl font-bold mb-6 text-gray-800">Generated Headshot</h2>
-              {message && (
-                <div className={`mb-6 p-4 border rounded-lg ${
-                  message.startsWith('Error:') 
-                    ? 'bg-red-50 border-red-200' 
-                    : 'bg-yellow-50 border-yellow-200'
-                }`}>
-                  <p className={`text-sm ${
-                    message.startsWith('Error:') 
-                      ? 'text-red-800' 
-                      : 'text-yellow-800'
-                  }`}>{message}</p>
-                </div>
-              )}
-              <div className="relative inline-block">
-                <img 
-                  src={generatedImage} 
-                  alt="Generated headshot" 
-                  className="max-w-full max-h-[500px] rounded-2xl shadow-2xl"
-                />
+                </Link>
                 <button 
-                  className="mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-full font-semibold hover:from-green-600 hover:to-emerald-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  onClick={downloadImage}
+                  onClick={() => {
+                    document.getElementById('how-it-works')?.scrollIntoView({ 
+                      behavior: 'smooth' 
+                    });
+                  }}
+                  className="text-gray-600 hover:text-gray-900 px-6 py-4 rounded-full font-medium text-lg hover:bg-gray-100 transition-all duration-300 cursor-pointer"
                 >
-                  {getDownloadButtonText()}
+                  Learn more
                 </button>
               </div>
-            </div>
-          )}
-
-
-          {/* Footer */}
-          <div className="mt-12 pt-8 border-t border-white/20">
-            <div className="flex justify-center items-center gap-6">
-              <a
-                href="mailto:kvchgtw@gmail.com"
-                className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors duration-200"
-                aria-label="Send email to kvchgtw@gmail.com"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                </svg>
-                <span className="text-sm">Contact</span>
-              </a>
-              
-              <a
-                href="https://www.linkedin.com/in/tin-wen-chang/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
-                aria-label="Visit LinkedIn profile"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm">LinkedIn</span>
-              </a>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Carousel Section */}
+      <section className="py-16 bg-white/80 backdrop-blur-sm">
+        <div className="max-w-[1350px] mx-auto px-4">
+          <div className="carousel-container">
+            <Slider 
+              ref={sliderRef}
+              {...{
+                dots: false,
+                infinite: true,
+                slidesToShow: 4.1,
+                slidesToScroll: 1,
+                autoplay: true,
+                speed: 5000,
+                autoplaySpeed: 0,
+                cssEase: "linear",
+                arrows: false,
+                pauseOnHover: false,
+                pauseOnFocus: false,
+                pauseOnDotsHover: false,
+                centerMode: false,
+                variableWidth: false,
+                responsive: [
+                  {
+                    breakpoint: 1400,
+                    settings: {
+                      slidesToShow: 3.8,
+                      slidesToScroll: 1,
+                    }
+                  },
+                  {
+                    breakpoint: 1200,
+                    settings: {
+                      slidesToShow: 3.5,
+                      slidesToScroll: 1,
+                    }
+                  },
+                  {
+                    breakpoint: 1024,
+                    settings: {
+                      slidesToShow: 2.5,
+                      slidesToScroll: 1,
+                    }
+                  },
+                  {
+                    breakpoint: 780,
+                    settings: {
+                      slidesToShow: 2,
+                      slidesToScroll: 1,
+                    }
+                  },
+                  {
+                    breakpoint: 640,
+                    settings: {
+                      slidesToShow: 1.5,
+                      slidesToScroll: 1,
+                    }
+                  },
+                  {
+                    breakpoint: 400,
+                    settings: {
+                      slidesToShow: 1,
+                      slidesToScroll: 1,
+                    }
+                  }
+                ]
+              }}>
+              {[
+                { src: '/carousel-images/headshot-1.jpg', alt: 'Professional headshot - Business man with olive background' },
+                { src: '/carousel-images/headshot-2.jpg', alt: 'Professional headshot - Business man with gray background' },
+                { src: '/carousel-images/headshot-3.jpg', alt: 'Professional headshot - Asian woman in blazer' },
+                { src: '/carousel-images/headshot-4.jpg', alt: 'Professional headshot - Woman with blue background' },
+                { src: '/carousel-images/headshot-5.jpg', alt: 'Professional headshot - Blonde woman in black blazer' },
+                { src: '/carousel-images/headshot-6.jpg', alt: 'Professional headshot - Young man in suit' },
+              ].map((image, index) => (
+                <div key={index} className="px-4">
+                  <div 
+                    className="group relative w-72 h-96 rounded-2xl overflow-hidden shadow-lg mx-auto hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                    onMouseEnter={() => handleImageHover(true)}
+                    onMouseLeave={() => handleImageHover(false)}
+                  >
+                    <img 
+                      src={image.src} 
+                      alt={image.alt}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+                </div>
+              ))}
+            </Slider>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="how-it-works" className="py-20 bg-gradient-to-br from-white to-amber-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+              How it works
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Transform your photos into professional headshots in three simple steps
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-4xl font-black text-white drop-shadow-lg">1</span>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Upload Your Photo</h3>
+              <p className="text-gray-600 leading-relaxed">Upload a clear, well-lit photo of yourself. Our AI works best with photos that show your face clearly.</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-4xl font-black text-white drop-shadow-lg">2</span>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Customize Style</h3>
+              <p className="text-gray-600 leading-relaxed">Choose your background, clothing style, and portrait size to match your professional needs.</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-4xl font-black text-white drop-shadow-lg">3</span>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Get Your Headshot</h3>
+              <p className="text-gray-600 leading-relaxed">Download your professional headshot instantly. Perfect for LinkedIn, resumes, and professional profiles.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+              Loved by professionals
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Join thousands of professionals who have transformed their online presence
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Sarah Chen",
+                role: "Marketing Director",
+                feedback: "Absolutely amazing! The AI captured my professional essence perfectly. Much better than my previous headshots.",
+                avatar: "SC"
+              },
+              {
+                name: "Michael Rodriguez",
+                role: "Software Engineer",
+                feedback: "Incredible quality and so easy to use. Got my LinkedIn profile updated in minutes instead of weeks.",
+                avatar: "MR"
+              },
+              {
+                name: "Emily Johnson",
+                role: "Business Consultant",
+                feedback: "The customization options are fantastic. I was able to get exactly the style I wanted for my business profile.",
+                avatar: "EJ"
+              },
+              {
+                name: "David Kim",
+                role: "Product Manager",
+                feedback: "Best investment I've made for my professional image. The results look completely natural and professional.",
+                avatar: "DK"
+              },
+              {
+                name: "Lisa Wang",
+                role: "Designer",
+                feedback: "So convenient! No need to book photographers or worry about lighting. The AI did all the work.",
+                avatar: "LW"
+              },
+              {
+                name: "James Thompson",
+                role: "Sales Executive",
+                feedback: "Perfect for remote work. Got professional headshots without leaving my home office. Highly recommend!",
+                avatar: "JT"
+              }
+            ].map((user, index) => (
+              <div key={index} className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-blue-200">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-white font-semibold text-sm">{user.avatar}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{user.name}</h4>
+                    <p className="text-sm text-gray-500">{user.role}</p>
+                  </div>
+                </div>
+                <p className="text-gray-600 italic leading-relaxed">"{user.feedback}"</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-amber-50">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+              Frequently asked questions
+            </h2>
+          </div>
+          
+          <div className="space-y-8">
+            {[
+              {
+                question: "What is Banana Headshot?",
+                answer: "Banana Headshot is an AI-powered tool that creates professional-quality headshots from your photos. Instead of booking a photoshoot, simply upload one photo, and our AI generates polished, studio-style portraits ideal for LinkedIn, resumes, social media, or professional branding."
+              },
+              {
+                question: "What AI model does it use?",
+                answer: "This application is built using the gemini-2.5-flash-image-preview, also known as Nano Banana."
+              },
+              {
+                question: "Is it free to use?",
+                answer: "It's currently free to use, but this may change in the future as we continue to improve our service."
+              },
+              {
+                question: "How do I get the best results?",
+                answer: "Use clear, well-lit selfies with sharp features. Avoid blurry or overly shadowed photos for the best results."
+              },
+              {
+                question: "What if the headshot doesn't look like me?",
+                answer: "Make sure your source photos clearly show your facial features in natural lighting. If you're not satisfied with the result, you can always generate a new headshot with different settings."
+              }
+            ].map((faq, index) => (
+              <div key={index} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  {faq.question}
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {faq.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-orange-100 via-red-100 to-pink-100">
+        <div className="max-w-4xl mx-auto text-center px-6">
+          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+            Ready to create your professional headshot?
+          </h2>
+          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
+            Join thousands of professionals who have transformed their online presence with AI-powered headshots
+          </p>
+          <Link href="/generate">
+            <button className="group relative bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 px-8 rounded-full font-semibold text-lg hover:from-orange-700 hover:to-red-700 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer">
+              <span className="relative z-10">Generate Your Headshot</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-600 rounded-full blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+          </Link>
+        </div>
+      </section>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
