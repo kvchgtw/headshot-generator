@@ -261,7 +261,7 @@ export default function HomePage() {
                     <p className="text-sm text-gray-500">{user.role}</p>
                   </div>
                 </div>
-                <p className="text-gray-600 italic leading-relaxed">"{user.feedback}"</p>
+                <p className="text-gray-600 italic leading-relaxed">&ldquo;{user.feedback}&rdquo;</p>
               </div>
             ))}
           </div>

@@ -303,7 +303,7 @@ export default function GeneratePage() {
           
           // Success - no additional message needed as the share sheet handles it
           return;
-        } catch (shareError) {
+        } catch {
           console.log('Web Share API failed, falling back to download method');
           // Fall through to fallback method
         }

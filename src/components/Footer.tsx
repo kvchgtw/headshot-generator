@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -22,18 +23,18 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-white">Quick Links</h4>
             <div className="space-y-2">
-              <a 
+              <Link 
                 href="/" 
                 className="block text-gray-300 hover:text-orange-400 transition-colors duration-200 text-sm cursor-pointer"
               >
                 Home
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/generate" 
                 className="block text-gray-300 hover:text-orange-400 transition-colors duration-200 text-sm cursor-pointer"
               >
                 Generate Headshot
-              </a>
+              </Link>
             </div>
           </div>
 
