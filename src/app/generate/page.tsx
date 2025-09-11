@@ -248,23 +248,56 @@ export default function GeneratePage() {
         // For mobile devices, use a different approach
         await downloadImageForMobile();
       } else {
-        // For desktop, use the traditional download method
-        downloadImageForDesktop();
+        // For desktop, use the blob download method
+        await downloadImageForDesktop();
       }
     } catch (error) {
       console.error('Error downloading image:', error);
       // Fallback to desktop method
-      downloadImageForDesktop();
+      await downloadImageForDesktop();
     }
   };
 
-  const downloadImageForDesktop = () => {
-    const link = document.createElement('a');
-    link.href = generatedImage!;
-    link.download = 'ai-headshot.png';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImageForDesktop = async () => {
+    try {
+      // Convert base64 to blob to avoid browser prompts
+      const response = await fetch(generatedImage!);
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create a temporary link with proper attributes
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'ai-headshot.png';
+      link.style.display = 'none';
+      
+      // Add attributes to help with downloads
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      
+      document.body.appendChild(link);
+      
+      // Trigger the download
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+    } catch (error) {
+      console.error('Desktop download failed:', error);
+      // Fallback to original method if blob method fails
+      const link = document.createElement('a');
+      link.href = generatedImage!;
+      link.download = 'ai-headshot.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const getDownloadButtonText = () => {
@@ -572,7 +605,7 @@ export default function GeneratePage() {
                             Generating...
                           </div>
                         ) : (
-                          <span className="relative z-10">Generate Custom Headshot</span>
+                          <span className="relative z-10">Generate</span>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-600 rounded-full blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </button>
