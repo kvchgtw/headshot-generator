@@ -24,9 +24,9 @@ export default function GeneratePage() {
     backgroundType: 'gradient',
     backgroundColor: 'blue',
     backgroundStyle: 'bold',
-    faceAngle: 'Full-face view',
-    clothing: 'Wearing formal attire',
-    portraitSize: 'This is a bust portrait'
+    faceAngle: 'full-face',
+    clothing: 'smart-casual',
+    portraitSize: 'bust'
   });
 
   // Available options
@@ -366,21 +366,6 @@ export default function GeneratePage() {
         URL.revokeObjectURL(blobUrl);
       }, 100);
       
-      // Show appropriate success message based on platform
-      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-          alert('Image downloaded! To save to your camera roll:\n1. Open the downloaded image\n2. Tap the share button (square with arrow)\n3. Select "Save to Photos"');
-        }, 500);
-      } else if (/Android/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-          alert('Image saved! Check your Downloads folder or Gallery app.');
-        }, 500);
-      } else {
-        setTimeout(() => {
-          alert('Image downloaded successfully!');
-        }, 500);
-      }
-      
     } catch (error) {
       console.error('Mobile download failed:', error);
       throw error;
@@ -409,9 +394,8 @@ export default function GeneratePage() {
             {(usageCount > 0 || remainingRequests !== null) && (
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-4 px-6 py-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-full text-sm text-orange-700 border border-orange-200">
-                  <span className="font-semibold">Generated: {usageCount}</span>
                   {remainingRequests !== null && (
-                    <span className="font-semibold">Remaining: {remainingRequests}</span>
+                    <span className="font-semibold">Remaining images: {remainingRequests}</span>
                   )}
                 </div>
               </div>
