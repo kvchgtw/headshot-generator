@@ -27,11 +27,12 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex flex-col">
       {/* Navigation */}
       <Navigation />
       
-      {/* Hero Section */}
+      {/* Main Content - flex-grow to take available space */}
+      <div className="flex-grow">
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-600/5 via-amber-600/5 to-red-600/5"></div>
         <div className="relative max-w-7xl mx-auto px-6 py-20 sm:py-32">
@@ -330,8 +331,9 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+      </div>
       
-      {/* Footer */}
+      {/* Footer - will be pushed to bottom by flex layout */}
       <Footer />
     </div>
   );

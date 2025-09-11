@@ -355,12 +355,12 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex flex-col">
       {/* Navigation */}
       <Navigation />
       
-      {/* Main Content */}
-      <div className="pt-20 pb-16">
+      {/* Main Content - flex-grow to take available space */}
+      <div className="flex-grow pt-20 pb-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <div className="text-center mb-12">
@@ -619,7 +619,7 @@ export default function GeneratePage() {
         </div>
       </div>
       
-      {/* Footer */}
+      {/* Footer - will be pushed to bottom by flex layout */}
       <Footer />
     </div>
   );
