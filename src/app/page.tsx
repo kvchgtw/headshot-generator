@@ -1,30 +1,22 @@
+
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Slider from 'react-slick';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
+import 'swiper/css';
+import 'swiper/css/autoplay';
 
 export default function HomePage() {
-  const sliderRef = useRef<Slider>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  const handleImageHover = (isHovering: boolean) => {
-    if (sliderRef.current) {
-      if (isHovering) {
-        sliderRef.current.slickPause();
-      } else {
-        sliderRef.current.slickPlay();
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex flex-col">
@@ -35,7 +27,7 @@ export default function HomePage() {
       <div className="flex-grow">
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-600/5 via-amber-600/5 to-red-600/5"></div>
-        <div className="relative max-w-7xl mx-auto px-6 py-20 sm:py-32">
+        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-5 sm:pt-32 sm:pb-5">
           <div className="text-center">
             <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
@@ -67,72 +59,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Carousel Section */}
+      {/* Swiper Infinite Carousel */}
       <section className="py-16 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-[1350px] mx-auto px-4">
-          <div className="carousel-container">
-            <Slider 
-              ref={sliderRef}
-              {...{
-                dots: false,
-                infinite: true,
-                slidesToShow: 4.1,
-                slidesToScroll: 1,
-                autoplay: true,
-                speed: 5000,
-                autoplaySpeed: 0,
-                cssEase: "linear",
-                arrows: false,
-                pauseOnHover: false,
-                pauseOnFocus: false,
-                pauseOnDotsHover: false,
-                centerMode: false,
-                variableWidth: false,
-                responsive: [
-                  {
-                    breakpoint: 1400,
-                    settings: {
-                      slidesToShow: 3.8,
-                      slidesToScroll: 1,
-                    }
-                  },
-                  {
-                    breakpoint: 1200,
-                    settings: {
-                      slidesToShow: 3.5,
-                      slidesToScroll: 1,
-                    }
-                  },
-                  {
-                    breakpoint: 1024,
-                    settings: {
-                      slidesToShow: 2.5,
-                      slidesToScroll: 1,
-                    }
-                  },
-                  {
-                    breakpoint: 780,
-                    settings: {
-                      slidesToShow: 2,
-                      slidesToScroll: 1,
-                    }
-                  },
-                  {
-                    breakpoint: 640,
-                    settings: {
-                      slidesToShow: 1.5,
-                      slidesToScroll: 1,
-                    }
-                  },
-                  {
-                    breakpoint: 400,
-                    settings: {
-                      slidesToShow: 1,
-                      slidesToScroll: 1,
-                    }
-                  }
-                ]
-              }}>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-6xl mx-auto">
+            <Swiper
+              modules={[Autoplay]}
+              spaceBetween={16}
+              slidesPerView={"auto"}
+              freeMode={true}
+              autoplay={{
+                delay: 0,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: false,
+              }}
+              speed={3000}
+              loop={true}
+              allowTouchMove={false}
+              breakpoints={{
+                640: {
+                  slidesPerView: 1.5,
+                },
+                768: {
+                  slidesPerView: 2,
+                },
+                1024: {
+                  slidesPerView: 3,
+                },
+                1280: {
+                  slidesPerView: 4,
+                },
+              }}
+              className="mySwiper"
+            >
               {[
                 { src: '/carousel-images/headshot-1.jpg', alt: 'Professional headshot - Business man with olive background' },
                 { src: '/carousel-images/headshot-2.jpg', alt: 'Professional headshot - Business man with gray background' },
@@ -141,22 +100,17 @@ export default function HomePage() {
                 { src: '/carousel-images/headshot-5.jpg', alt: 'Professional headshot - Blonde woman in black blazer' },
                 { src: '/carousel-images/headshot-6.jpg', alt: 'Professional headshot - Young man in suit' },
               ].map((image, index) => (
-                <div key={index} className="px-4">
-                  <div 
-                    className="group relative w-72 h-96 rounded-2xl overflow-hidden shadow-lg mx-auto hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-                    onMouseEnter={() => handleImageHover(true)}
-                    onMouseLeave={() => handleImageHover(false)}
-                  >
+                <SwiperSlide key={index}>
+                  <div className="w-64 h-80 rounded-2xl overflow-hidden shadow-lg">
                     <img 
                       src={image.src} 
                       alt={image.alt}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
-                </div>
+                </SwiperSlide>
               ))}
-            </Slider>
+            </Swiper>
           </div>
         </div>
       </section>
