@@ -34,7 +34,7 @@ export default function HomePage() {
                 <span className="bg-gradient-to-r from-gray-900 via-orange-700 to-red-700 bg-clip-text text-transparent">Banana Headshot</span> <span className="text-yellow-500">🍌</span>
               </h1>
               <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto font-light">
-                Professional headshots without a photo shoot
+              Create professional headshots from your selfie in minutes — saving you both money and precious time.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link href="/generate">
