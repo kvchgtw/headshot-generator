@@ -27,7 +27,7 @@ export default function HomePage() {
       <div className="flex-grow">
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-600/5 via-amber-600/5 to-red-600/5"></div>
-        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-5 sm:pt-32 sm:pb-5">
+        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-5 sm:pt-32 sm:pb-20">
           <div className="text-center">
             <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
