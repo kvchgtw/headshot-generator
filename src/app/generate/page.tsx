@@ -599,7 +599,7 @@ export default function GeneratePage() {
                         disabled={isLoading}
                       >
                         {isLoading ? (
-                          <div className="flex items-center justify-center gap-3">
+                          <div className="flex items-center justify-center gap-3 relative z-10">
                             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             Generating...
                           </div>

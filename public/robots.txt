@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://bananaheadshot.com/sitemap.xml
+
+# Allow all bots to crawl all pages
+Disallow:
