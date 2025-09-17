@@ -47,8 +47,8 @@ const generatePrompt = (customizations: Customizations) => {
   // Map background options
   const backgroundMap: { [key: string]: string } = {
     'gradient': `bold ${customizations.backgroundColor} gradient`,
-    'park': 'park',
-    'urban': 'urban street',
+    'park': 'sunshine park',
+    'urban': 'bright Wall street sidewalk without people',
     'beach': 'beach',
     'mountain': 'mountain',
     'forest': 'forest',
